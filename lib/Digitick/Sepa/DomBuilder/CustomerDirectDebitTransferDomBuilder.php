@@ -28,14 +28,14 @@ use Digitick\Sepa\TransferInformation\CustomerDirectDebitTransferInformation;
 use Digitick\Sepa\TransferInformation\TransferInformationInterface;
 use Digitick\Sepa\PaymentInformation;
 use Digitick\Sepa\TransferFile\TransferFileInterface;
+use Digitick\Sepa\GroupHeader;
 
 
 class CustomerDirectDebitTransferDomBuilder extends BaseDomBuilder
 {
 
-    public function __construct($painFormat = 'pain.008.002.02')
-    {
-        parent::__construct($painFormat);
+    public function __construct() {
+        parent::__construct(CustomerDirectDebitTransferFile::PAIN_FORMAT);
     }
 
     /**
@@ -44,8 +44,7 @@ class CustomerDirectDebitTransferDomBuilder extends BaseDomBuilder
      * @param TransferFileInterface $transferFile
      * @return mixed
      */
-    public function visitTransferFile(TransferFileInterface $transferFile)
-    {
+    public function visitTransferFile(TransferFileInterface $transferFile) {
         $this->currentTransfer = $this->doc->createElement('CstmrDrctDbtInitn');
         $this->root->appendChild($this->currentTransfer);
     }
@@ -56,18 +55,13 @@ class CustomerDirectDebitTransferDomBuilder extends BaseDomBuilder
      * @param PaymentInformation $paymentInformation
      * @return mixed
      */
-    public function visitPaymentInformation(PaymentInformation $paymentInformation)
-    {
+    public function visitPaymentInformation(PaymentInformation $paymentInformation) {
         $this->currentPayment = $this->createElement('PmtInf');
         $this->currentPayment->appendChild($this->createElement('PmtInfId', $paymentInformation->getId()));
         $this->currentPayment->appendChild($this->createElement('PmtMtd', $paymentInformation->getPaymentMethod()));
-        $this->currentPayment->appendChild(
-            $this->createElement('NbOfTxs', $paymentInformation->getNumberOfTransactions())
-        );
+        $this->currentPayment->appendChild($this->createElement('NbOfTxs', $paymentInformation->getNumberOfTransactions()));
 
-        $this->currentPayment->appendChild(
-            $this->createElement('CtrlSum', $this->intToCurrency($paymentInformation->getControlSumCents()))
-        );
+        $this->currentPayment->appendChild($this->createElement('CtrlSum', $this->intToCurrency($paymentInformation->getControlSumCents())));
 
         $paymentTypeInformation = $this->createElement('PmtTpInf');
         $serviceLevel = $this->createElement('SvcLvl');
@@ -124,33 +118,23 @@ class CustomerDirectDebitTransferDomBuilder extends BaseDomBuilder
      * @param TransferInformationInterface $transactionInformation
      * @return mixed
      */
-    public function visitTransferInformation(TransferInformationInterface $transactionInformation)
-    {
+    public function visitTransferInformation(TransferInformationInterface $transactionInformation) {
         /** @var  $transactionInformation CustomerDirectDebitTransferInformation */
         $directDebitTransactionInformation = $this->createElement('DrctDbtTxInf');
 
         $paymentId = $this->createElement('PmtId');
-        $paymentId->appendChild(
-            $this->createElement('EndToEndId', $transactionInformation->getEndToEndIdentification())
-        );
+        $paymentId->appendChild($this->createElement('EndToEndId', $transactionInformation->getEndToEndIdentification()));
         $directDebitTransactionInformation->appendChild($paymentId);
 
-        $instructedAmount = $this->createElement(
-            'InstdAmt',
-            $this->intToCurrency($transactionInformation->getTransferAmount())
-        );
+        $instructedAmount = $this->createElement('InstdAmt', $this->intToCurrency($transactionInformation->getTransferAmount()));
         $instructedAmount->setAttribute('Ccy', $transactionInformation->getCurrency());
         $directDebitTransactionInformation->appendChild($instructedAmount);
 
         $directDebitTransaction = $this->createElement('DrctDbtTx');
         $mandateRelatedInformation = $this->createElement('MndtRltdInf');
         $directDebitTransaction->appendChild($mandateRelatedInformation);
-        $mandateRelatedInformation->appendChild(
-            $this->createElement('MndtId', $transactionInformation->getMandateId())
-        );
-        $mandateRelatedInformation->appendChild(
-            $this->createElement('DtOfSgntr', $transactionInformation->getMandateSignDate()->format('Y-m-d'))
-        );
+        $mandateRelatedInformation->appendChild($this->createElement('MndtId', $transactionInformation->getMandateId()));
+        $mandateRelatedInformation->appendChild($this->createElement('DtOfSgntr', $transactionInformation->getMandateSignDate()->format('Y-m-d')));
         $directDebitTransactionInformation->appendChild($directDebitTransaction);
 
         // TODO add the possibility to add CreditorSchemeId on transfer level
@@ -167,12 +151,36 @@ class CustomerDirectDebitTransferDomBuilder extends BaseDomBuilder
         $debtorAccount->appendChild($this->getIbanElement($transactionInformation->getIban()));
         $directDebitTransactionInformation->appendChild($debtorAccount);
 
-        $directDebitTransactionInformation->appendChild(
-            $this->getRemittenceElement($transactionInformation->getRemittanceInformation())
-        );
+        $directDebitTransactionInformation->appendChild($this->getRemittenceElement($transactionInformation->getRemittanceInformation()));
         $this->currentPayment->appendChild($directDebitTransactionInformation);
 
     }
 
+
+/**
+    * Add the specific OrgId element for the format 'pain.008.001.02'
+    *
+    * @param  GroupHeader $groupHeader
+    * @return mixed
+    */
+   public function visitGroupHeader(GroupHeader $groupHeader)
+   {
+       parent::visitGroupHeader($groupHeader);
+
+       if ($groupHeader->getInitiatingPartyId() !== null && CustomerDirectDebitTransferFile::PAIN_FORMAT === 'pain.008.001.02') {
+           $newId = $this->createElement('Id');
+           $orgId = $this->createElement('PrvtId');
+           $othr  = $this->createElement('Othr');
+           $othr->appendChild($this->createElement('Id', $groupHeader->getInitiatingPartyId()));
+           $orgId->appendChild($othr);
+           $newId->appendChild($orgId);
+
+           $xpath = new \DOMXpath($this->doc);
+           $items = $xpath->query('GrpHdr/InitgPty/Id', $this->currentTransfer);
+           $oldId = $items->item(0);
+
+           $oldId->parentNode->replaceChild($newId, $oldId);
+       }
+   }
 
 }

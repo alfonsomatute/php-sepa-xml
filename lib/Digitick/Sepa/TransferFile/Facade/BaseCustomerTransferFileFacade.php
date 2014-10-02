@@ -46,8 +46,7 @@ abstract class BaseCustomerTransferFileFacade implements CustomerTransferFileFac
      * @param TransferFileInterface $transferFile
      * @param BaseDomBuilder $domBuilder
      */
-    public function __construct(TransferFileInterface $transferFile, BaseDomBuilder $domBuilder)
-    {
+    public function __construct(TransferFileInterface $transferFile, BaseDomBuilder $domBuilder) {
         $this->transferFile = $transferFile;
         $this->domBuilder = $domBuilder;
     }
@@ -55,13 +54,11 @@ abstract class BaseCustomerTransferFileFacade implements CustomerTransferFileFac
     /**
      * @return string
      */
-    public function asXML()
-    {
-        foreach ($this->payments as $payment) {
+    public function asXML() {
+        foreach($this->payments as $payment) {
             $this->transferFile->addPaymentInformation($payment);
         }
         $this->transferFile->accept($this->domBuilder);
-
         return $this->domBuilder->asXml();
     }
 

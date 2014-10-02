@@ -22,7 +22,6 @@ namespace Digitick\Sepa\Exception;
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-class InvalidArgumentException extends Exception
-{
+class InvalidArgumentException extends Exception{
 
 }

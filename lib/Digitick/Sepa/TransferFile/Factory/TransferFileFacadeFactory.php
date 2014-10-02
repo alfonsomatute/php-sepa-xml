@@ -34,32 +34,26 @@ class TransferFileFacadeFactory
     /**
      * @param string $uniqueMessageIdentification
      * @param string $initiatingPartyName
-     * @param string $painFormat
      *
      * @return CustomerDirectDebitFacade
      */
-    public static function createDirectDebit($uniqueMessageIdentification, $initiatingPartyName, $painFormat = 'pain.008.002.02')
-    {
-        $groupHeader = new GroupHeader($uniqueMessageIdentification, $initiatingPartyName);
+    public static function createDirectDebit($uniqueMessageIdentification, $initiatingPartyName,$initiatingPartyId) {
+        $groupHeader = new GroupHeader($uniqueMessageIdentification, $initiatingPartyName, false, $initiatingPartyId);
         $directDebitTransferFile = new CustomerDirectDebitTransferFile($groupHeader);
-        $domBuilder = new CustomerDirectDebitTransferDomBuilder($painFormat);
-
+        $domBuilder = new CustomerDirectDebitTransferDomBuilder();
         return new CustomerDirectDebitFacade($directDebitTransferFile, $domBuilder);
     }
 
     /**
-     * @param string $uniqueMessageIdentification
-     * @param string $initiatingPartyName
-     * @param string $painFormat
+     * @param $uniqueMessageIdentification
+     * @param $initiatingPartyName
      *
      * @return CustomerCreditFacade
      */
-    public static function createCustomerCredit($uniqueMessageIdentification, $initiatingPartyName, $painFormat = 'pain.001.002.03')
-    {
+    public static function createCustomerCredit($uniqueMessageIdentification, $initiatingPartyName) {
         $groupHeader = new GroupHeader($uniqueMessageIdentification, $initiatingPartyName);
         $directDebitTransferFile = new CustomerCreditTransferFile($groupHeader);
-        $domBuilder = new CustomerCreditTransferDomBuilder($painFormat);
-
+        $domBuilder = new CustomerCreditTransferDomBuilder();
         return new CustomerCreditFacade($directDebitTransferFile, $domBuilder);
     }
 }
